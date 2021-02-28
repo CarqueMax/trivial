@@ -1,16 +1,23 @@
 # bot.py
+import math
 import os
 import random
-import pages
-import discord
-from discord.ext import commands, tasks
-from dotenv import load_dotenv
 from datetime import datetime
-from discord.ext.commands import CommandNotFound
-import game
-from dmg import *
-import math
+
+import discord
 from discord import Intents
+from discord.ext import commands, tasks
+from discord.ext.commands import CommandNotFound
+from dotenv import load_dotenv
+
+from ennemies import *
+from embed import createWeaponEmbed, createEmbed, makeSPEmbed
+from utils import *
+import game
+import pages
+from xp import getPrestigeGain, calcExp, giveExp
+from dmg import *
+
 intents = Intents.default()
 intents.members = True
 intents.presences = True
@@ -27,10 +34,16 @@ USER_RATE_CONST3 = 130984
 TUFFIGANG_C_ID = 783647651349659698
 
 TUFFIGANG_R_ID = 783647539840286741
+D1A_ID         = 750451627403640974
 
-MAIWEN_ID = 688075252281901084
-GILDAS_ID = 158571429183356937
-EVAN_ID   = 282264924472737792
+
+MAIWEN_ID  = 688075252281901084
+GILDAS_ID  = 158571429183356937
+EVAN_ID    = 282264924472737792
+ANTOINE_ID = 319444688694280192
+GABRIEL_ID = 135321090699427840 #C'est moi le plus vieux sur discord hehe
+
+INSULTES_ACTIVATED = True
 
 MINDELAY = 60
 
@@ -38,13 +51,10 @@ MAXDELAY = 90
 
 maxoddstime = 600
 
-
 MAX_SP_TIER = 2
-
 
 load_dotenv()
 TOKEN = os.getenv('DISCORD_TOKEN')
-
 BOT_ID = int(os.getenv('BOT_ID'))
 
 
@@ -89,14 +99,14 @@ async def on_ready():
 async def on_message(message: discord.Message):
     process = True
     if message.guild is None and not message.author.bot:
-        if message.author.id == 143350417093296128 or message.author.id == 135321090699427840:
+        if message.author.id == 143350417093296128 or message.author.id == GABRIEL_ID:
             if "resetstats" in message.content:
                 idtoreset = int(message.content.split(' ')[1])
                 game.resetStats(idtoreset)
             elif "giveexp" in message.content:
                 uid = int(message.content.split(' ')[1])
                 amount = int(message.content.split(' ')[2])
-                game.giveExp(uid, amount)
+                giveExp(uid, amount)
 
             elif "giveweapon" in message.content:
                 uid = int(message.content.split(' ')[1])
@@ -120,42 +130,42 @@ async def on_message(message: discord.Message):
             await chan.send(response)
             process = False
 
-    if not message.author.bot and len(message.mentions) > 0:
-        if str(message.mentions[0].id) == str(BOT_ID):
+    elif not message.author.bot and len(message.mentions) > 0:
+        if BOT_ID in [m.id for m in message.mentions]:
             response = "Debrouille-toi."
+            if message.author.id == GABRIEL_ID:
+                response = "^ Cet homme a raison"
             chan = message.channel
             await chan.send(response)
-        elif (str(message.mentions[0].id) == str(EVAN_ID) or str(message.mentions[0].id) == str(GILDAS_ID)) and message.reference is None :
+            
+        elif (EVAN_ID in [m.id for m in message.mentions] or GILDAS_ID in [m.id for m in message.mentions]) and message.reference is None:
             response = "J'espere que tu le ping pour une bonne raison."
             chan = message.channel
             await chan.send(response)
-        elif str(message.mentions[0].id) == str(319444688694280192) and message.author.id == 135321090699427840 :
-            message.author.kick()
-        elif str(message.mentions[0].id) == str(MAIWEN_ID) and message.reference is None:
-            message.delete()
-            response = "ntm"
-            await message.channel.send(message.author, response)
-        else:
+            
+        elif message.mentions[0].id == MAIWEN_ID and message.reference is None and D1A_ID in [y.id for y in message.author.roles]:
             try:
-                if ':ok:' in message.content or ':cool:' in message.content and '750451627403640974' in [y.id for y in message.author.roles]:
-                    await message.delete()
+                bot.delete_message(message)
             except:
                 pass
-
+            finally:
+                response = "ntm"
+                await message.channel.send(response)
+    elif not message.author.bot:
+        if ('🆗' in message.content or '🆒' in message.content) and D1A_ID in [y.id for y in message.author.roles]:
+            await message.channel.send("pas sympa ca khey")
+    
     if (process and not message.author.bot):
         if message.channel.id != TUFFIGANG_C_ID:
             if len(message.content) >= 10 and 'lefevre' not in message.content:
                 g, p = canGain(message.author.id, message.id, message.content)
                 if g:
                     if p == 100:
-                        game.giveExp(message.author.id,
-                                     random.randint(60, 105))
+                        giveExp(message.author.id, random.randint(60, 105))
                         game.pickupRandom(message.author.id)
 
                     else:
-
-                        game.giveExp(message.author.id,
-                                     random.randint(30, 55))
+                        giveExp(message.author.id, random.randint(30, 55))
 
                     if random.randint(1, 100) <= p and game.amountOfPveBattles(message.author.id) < 5:
                         game.incPveBattles(message.author.id)
@@ -351,8 +361,7 @@ async def on_reaction_add(reaction, user):
 
                         isPve = footertxt == "PVE"
 
-                        firstuser = desc.split(' ')[0].split('!')[
-                            1].split('>')[0]
+                        firstuser = desc.split(' ')[0].split('!')[1].split('>')[0]
 
                         if not isPve:
                             seconduser = desc.split(' ')[4].split('!')[
@@ -366,8 +375,7 @@ async def on_reaction_add(reaction, user):
                         else:
                             seconduser = desc.split(' ')[4]
 
-                            fighter2 = game.getEnnemyData(
-                                game.getEnnemyIDFromName(seconduser))
+                            fighter2 = getEnnemyData(getEnnemyIDFromName(seconduser))
 
                         firstturn = str(firstuser)
                         secondturn = str(seconduser)
@@ -698,7 +706,7 @@ async def on_reaction_add(reaction, user):
 
                                     exptogain = int(exptogain * fighter1["pstats"]["exp"])
 
-                                    game.giveExp(firstuser, exptogain)
+                                    giveExp(firstuser, exptogain)
 
                                     newembed.add_field(name="Il gagne " + str(exptogain) + " points d'experience.", value= "\u200b", inline = False)
 
@@ -756,22 +764,9 @@ async def on_reaction_add(reaction, user):
                 else:
                     await reaction.remove(user)
 
-def calcExp(level: int, opponent: int):
-    maxexp1 = (level ** 3 + 1) - ((level - 1) ** 3 + 1)
-    maxexp2 = (opponent ** 3 + 1) - ((opponent - 1) ** 3 + 1)
-
-    difftropelevee = 0.8 * max(level, opponent) - min(level, opponent) - 5
-
-    exptogain = int(((opponent + 6)/(level + 1)) * .1 * maxexp2 + 20)
-    
-    if difftropelevee > 1:
-        exptogain /= difftropelevee
-        exptogain = max(20, int(exptogain)) # au moins 20 d'xp
-    return exptogain
 
 def heal(hp, maxhp, spa):
     return min(maxhp, int(hp + 5 + 2/10 * maxhp + spa))
-
 
 @bot.event
 async def on_reaction_remove(reaction, user):
@@ -925,7 +920,6 @@ async def noteprojet(ctx):
                           str(nbpages3) + \
                               " pages, il mérite donc la note de " + str(note3)
                       )
-
             await ctx.send(msg)
     except:
         response = 'Il y a eu un problème. Utilisez lefevre noteprojet ou lefevre noteprojet <@User>'
@@ -958,13 +952,21 @@ async def serverinfo(ctx):
             description=guild.description
         )
         embed.set_author(name=guild.name, icon_url= str(guild.icon_url))
-        embed.add_field(name='Creation date', value=str(ts), inline=False)
-        embed.add_field(name='Member count', value=str(
-            guild.member_count), inline=False)
-        embed.add_field(name='Region', value=str(guild.region), inline=False)
-        embed.add_field(name='Custom emoji count', value=str(
-            len(guild.emojis)), inline=False)
-        embed.add_field(name='Owner', value=str(guild.owner), inline=False)
+        embed.add_field(name='Creation date', 
+                        value=str(ts), 
+                        inline=False)
+        embed.add_field(name='Member count', 
+                        value=str(guild.member_count), 
+                        inline=False)
+        embed.add_field(name='Region', 
+                        value=str(guild.region), 
+                        inline=False)
+        embed.add_field(name='Custom emoji count', 
+                        value=str(len(guild.emojis)), 
+                        inline=False)
+        embed.add_field(name='Owner',
+                        value=str(guild.owner), 
+                        inline=False)
 
         await ctx.send(embed=embed)
 
@@ -1003,15 +1005,20 @@ async def showstats(ctx):
     bar = "█" * progression + "░" * (10 - progression)
 
     embed.add_field(name=('Level ' + str(level)),
-                    value=("HP " + str(hp)), inline=False)
-    embed.add_field(name=('Attaque ' + str(atk) + "  [ +" + atkbonus + " ] (atk)"), value=(
-        "Defense " + str(de) + "  [ +" + defbonus + " ] (def)"), inline=False)
-    embed.add_field(name=('Att. Spe ' + str(spa) + "  [ +" + spabonus + " ] (spa)"), value=(
-        "Def. Spe " + str(spd) + "  [ +" + spdbonus + " ] (spd)"), inline=False)
-    embed.add_field(name=('Vitesse ' + str(spe) + "  [ +" + spebonus + " ] (spe)"), value=(
-        "Points de stats restants " + str(statpoints)), inline=False)
-    embed.add_field(name=('Exp : ' + str(exp) + " / " + \
-                    str(maxexp)), value=bar, inline=False)
+                    value=("HP " + str(hp)), 
+                    inline=False)
+    embed.add_field(name=('Attaque ' + str(atk) + "  [ +" + atkbonus + " ] (atk)"), 
+                    value=("Defense " + str(de) + "  [ +" + defbonus + " ] (def)"), 
+                    inline=False)
+    embed.add_field(name=('Att. Spe ' + str(spa) + "  [ +" + spabonus + " ] (spa)"), 
+                    value=("Def. Spe " + str(spd) + "  [ +" + spdbonus + " ] (spd)"),
+                    inline=False)
+    embed.add_field(name='Vitesse ' + str(spe) + "  [ +" + spebonus + " ] (spe)",
+                    value=f"Points de stats restants f{str(statpoints)}",
+                    inline=False)
+    embed.add_field(name=('Exp : ' + str(exp) + " / " + str(maxexp)),
+                    value=bar, 
+                    inline=False)
     await ctx.send(embed=embed)
 
 
@@ -1031,13 +1038,18 @@ async def showweaponstats(ctx):
     spd = weapon["spd"]
     spe = weapon["spe"]
 
-    embed.add_field(name=('Nom : ' + nom), value="-----------", inline=False)
+    embed.add_field(name=('Nom : ' + nom), 
+                    value="-----------", 
+                    inline=False)
     embed.add_field(name=('Attaque ' + str(atk)),
-                    value=("Defense " + str(de)), inline=False)
+                    value=("Defense " + str(de)), 
+                    inline=False)
     embed.add_field(name=('Att. Spe ' + str(spa)),
-                    value=("Def. Spe " + str(spd)), inline=False)
+                    value=("Def. Spe " + str(spd)), 
+                    inline=False)
     embed.add_field(name=('Vitesse ' + str(spe)),
-                    value="-----------", inline=False)
+                    value="-----------", 
+                    inline=False)
 
     await ctx.send(embed=embed)
 
@@ -1057,8 +1069,7 @@ async def usepoint(ctx, *args):
             if game.increaseStat(useri, stat, amount):
                 if (stat == "hp"):
                     amount *= 2
-                response = "La stat de " + stat + \
-                    " a ete augmentée de " + str(amount)
+                response = f"La stat de {stat} a ete augmentée de {str(amount)}"
             else:
                 response = "Une erreur s'est produite en tentant d'augmenter votre stat"
         else:
@@ -1094,7 +1105,6 @@ async def duel(ctx, *args):
 
         else:
             response = "Vous ne pouvez pas vous battre en duel contre vous-même!"
-
     except:
         response = "lefevre duel @User"
     finally:
@@ -1103,8 +1113,7 @@ async def duel(ctx, *args):
             newembed = discord.Embed(
                 colour=discord.Colour.purple(),
                 title='Duel',
-                description=str("<@!" + str(useri1) + \
-                                "> a provoque <@!" + str(useri2) + "> en duel!")
+                description=str("<@!" + str(useri1) + "> a provoque <@!" + str(useri2) + "> en duel!")
             )
 
             level1 = int(user1["stats"]["level"])
@@ -1143,43 +1152,6 @@ def getMana(manaembed1, manaembed2):
 
 def dmgCalc(attacker, defender, w, hpAtk):
     return Dmg(attacker, defender, w, hpAtk)
-
-
-def createEmbed(firstturn, secondturn, names, lvl1, lvl2, hp1, maxhp1, hp2, maxhp2, mana1, mana2, maxmana1, maxmana2, battledesc, footer, isPve, p1Psn, p2Psn):
-    if isPve:
-        mydesc = str("<@!" + firstturn +
-                     ">, choisis une attaque! " + secondturn + " se défend.")
-    else:
-        mydesc = str("<@!" + firstturn +
-                     ">, choisis une attaque! <@!" + secondturn + "> se défend.")
-
-    newembed = discord.Embed(
-        colour=discord.Colour.purple(),
-        title='Duel',
-        description=mydesc
-    )
-
-    hpbar1 = "█" * int(10 * hp1/maxhp1) + "░" * (10 - int(10 * hp1/maxhp1))
-    hpbar2 = "█" * int(10 * hp2/maxhp2) + "░" * (10 - int(10 * hp2/maxhp2))
-
-    manabar1 = "█" * int(10 * mana1/10) + "░" * (10 - int(10 * mana1/maxmana1))
-    manabar2 = "█" * int(10 * mana2/10) + "░" * (10 - int(10 * mana2/maxmana2))
-
-    newembed.add_field(name=names, value= "Lvl " + lvl1 + " VS Lvl " + lvl2, inline = False)
-    newembed.add_field(name="HP[" + str(p1Psn) + "] " + str(hp1) + " / " + str(maxhp1), value= hpbar1, inline = True)
-    newembed.add_field(name="HP[" + str(p2Psn) + "] " + str(hp2) + " / " + str(maxhp2), value= hpbar2, inline = True)
-    newembed.add_field(name='\u200b', value = '\u200b', inline = True)
-    newembed.add_field(name="Mana " + str(mana1) + " / " + str(maxmana1), value= manabar1, inline = True)
-    newembed.add_field(name="Mana " + str(mana2) + " / " + str(maxmana2), value= manabar2, inline = True)
-    newembed.add_field(name='\u200b', value= '\u200b', inline = True)
-    newembed.add_field(name="- - - - - - - - - - - - - - - - - - - - - - - - - - - - -", value= "\u200b", inline = False)
-    newembed.add_field(name=":crossed_swords: Attaque physique        :magic_wand: Attaque magique", value= "\u200b", inline = False)
-    newembed.add_field(name=":dagger: Coup sournois             :broccoli: Sort de soin", value= "\u200b", inline = False)
-    newembed.add_field(name="- - - - - - - - - - - - - - - - - - - - - - - - - - - - -", value= "\u200b", inline = False)
-    newembed.add_field(name=battledesc, value= "\u200b", inline = False)
-    newembed.set_footer(text=footer)
-
-    return newembed
 
 
 @bot.command(name='pve')
@@ -1254,35 +1226,8 @@ async def pve(ctx, *args):
 
 @bot.command(name='pveamount')
 async def pveamount(ctx):
-    msg = str("Vous avez " +
-              str(game.amountOfPveBattles(ctx.message.author.id)) + " combats restants.")
+    msg = str("Vous avez " + str(game.amountOfPveBattles(ctx.message.author.id)) + " combats restants.")
     await ctx.send(msg)
-
-
-def createWeaponEmbed(userID, pageNumber):
-    embed = discord.Embed(
-        colour=discord.Colour.purple(),
-        title='Inventaire',
-        description=str("Voici l'inventaire de <@!" + str(userID) + ">")
-    )
-
-    fields = game.retInventory(userID, pageNumber - 1)
-
-    emojis = [":zap:", ":fire:", ":droplet:"]
-
-    if fields != None:
-        for idx, f in enumerate(fields):
-            embed.add_field(name=f, value= "Equippez l'arme en reagissant avec " + emojis[idx+1], inline = False)
-
-    fi = game.fullInventory(userID)
-
-    nbPages = int(1 + (len(fi) - 1) / 3)
-
-    ft = str("Page " + str(pageNumber) + " / " + str(nbPages))
-
-    embed.set_footer(text=ft)
-
-    return embed
 
 
 @bot.command(name='cw')
@@ -1324,7 +1269,7 @@ async def resetstats(ctx):
 
 @bot.command(name='secret')
 async def secret(ctx):
-    msg = str("Cette commande ne sera disponible qu'à partir du 29 Janvier.")
+    msg = str("Cette commande ne sera disponible qu'à partir du 29 Janvier.") # On est le 17 février là quand meme
     await ctx.send(msg)
 
 
@@ -1338,32 +1283,9 @@ async def sellCurrentWeapon(ctx):
     await ctx.send(msg)
 
 
-splist = "Assassin, Alchimiste, Battlemage, Berserker, Bloodmage, Sorcier, Vampire"
 splist1 = ['Assassin', 'Alchimiste', 'Battlemage',
            'Berserker', 'Bloodmage', 'Sorcier', 'Vampire']
-
-
-def makeSPEmbed(sp, embed):
-    embed.add_field(name="Spécialité : " + sp["name"], value= "- - - - - - - - - -", inline = False)
-
-    spstats = sp["stats"]
-    spdesc = sp["desc"]
-    hp = spstats["hp"]
-    atk = spstats["atk"]
-    de = spstats["def"]
-    spa = spstats["spa"]
-    spd = spstats["spd"]
-    spe = spstats["spe"]
-    embed.add_field(name=('HP ' + str(hp)),
-                    value=("Attaque " + str(atk)), inline=False)
-    embed.add_field(name='Defense ' + str(de),
-                    value="Att. Spe " + str(spa), inline=False)
-    embed.add_field(name='Def. Spe ' + str(spd),
-                    value="Vitesse " + str(spe), inline=False)
-    embed.add_field(name="- - - - - - - - - -", value= "\u200b", inline = False)
-    embed.add_field(name=spdesc, value= "\u200b", inline = False)
-
-    return embed
+splist = ', '.join(splist1)
 
 
 @bot.command(name='sp')
@@ -1415,10 +1337,8 @@ async def ban(ctx, *args):
     try:
         mentionned_user = ctx.message.mentions[0]
         useri1 = ctx.message.author.id
-        ids = [143350417093296128, 135321090699427840] # 135321090699427840
-        if useri1 == 135321090699427840:
-            ctx.message.user.kick()
-        elif useri1 in ids and mentionned_user!=useri1:
+        ids = [143350417093296128, 135321090699427840]
+        if useri1 in ids and mentionned_user!=useri1:
             # C'EST UN KICK PAS UN BAN OK JE FAIS PAS DES PRANKS DE BATARD NON PLUS
             await mentionned_user.kick()
             response = "ok bro"
@@ -1429,10 +1349,6 @@ async def ban(ctx, *args):
     finally:
         msg = await ctx.send(response)
 
-def getPrestigeGain(user):
-    lvl = user["stats"]["level"]
-
-    return int(10 + (lvl - 50)**1.2)
 
 @bot.command(name='prestige')
 async def prestige(ctx):
@@ -1449,11 +1365,14 @@ async def prestige(ctx):
             title=('Prestige'),
         )
         embed.add_field(name='Voulez-vous vraiment prestige ?',
-                        value="\u200b", inline=False)
-        embed.add_field(
-            name='Vous recommencerez au niveau 0, en perdant votre équipement et votre spécialité.', value="\u200b", inline=False)
+                        value="\u200b",
+                        inline=False)
+        embed.add_field(name='Vous recommencerez au niveau 0, en perdant votre équipement et votre spécialité.',
+                        value="\u200b",
+                        inline=False)
         embed.add_field(name='Vous obtiendrez ' + str(pgain) + ' points de prestige.',
-                        value="Si vous êtes sûr de vouloir prestige, faites `lefevre prestigeconfirm`.", inline=False)
+                        value="Si vous êtes sûr de vouloir prestige, faites `lefevre prestigeconfirm`.",
+                        inline=False)
         await ctx.send(embed=embed)
 
 
@@ -1515,14 +1434,18 @@ async def prestigeshop(ctx):
     sBonus = statLvl * 5
 
     embed.add_field(name="Multiplicateur d'experience actuel : " + str(exp_mul),
-                    value="Suivant : " + str(nexp_mul) + " Cout : " + str(eCost), inline=False)
+                    value="Suivant : " + str(nexp_mul) + " Cout : " + str(eCost), 
+                    inline=False)
     embed.add_field(name="Bonus de stats actuel (pour toutes les stats) : " + str(sBonus),
-                    value="Suivant : " + str(sBonus + 5) + " Cout : " + str(stCost), inline=False)
+                    value="Suivant : " + str(sBonus + 5) + " Cout : " + str(stCost), 
+                    inline=False)
     if spLvl < MAX_SP_TIER:
-        embed.add_field(name="Tier des spécialités déverouillées : " + str(spLvl), value="Suivant : " + \
-            str(spLvl + 1) + " Cout : " + str(spCost) + " Max : " + str(MAX_SP_TIER), inline=False)
+        embed.add_field(name="Tier des spécialités déverouillées : " + str(spLvl), 
+                        value="Suivant : " + str(spLvl + 1) + " Cout : " + str(spCost) + " Max : " + str(MAX_SP_TIER),
+                        inline=False)
     embed.add_field(name='Pour dépenser vos points de prestiges, utilisez la commande `lefevre pbuy <item>`',
-                    value="<item> : (sp | exp | stats)", inline=False)
+                    value="<item> : (sp | exp | stats)",
+                    inline=False)
 
     await ctx.send(embed=embed)
 
@@ -1543,12 +1466,13 @@ async def pbuy(ctx, *args):
     finally:
         await ctx.send(msg)
 
+
 @bot.command(name='abusereset')
 async def abusereset(ctx, *args):
     response = ""
     try:
         userid = ctx.message.author.id
-        if userid == 143350417093296128 or userid == 135321090699427840:
+        if userid == 143350417093296128 or userid == GABRIEL_ID:
             try:
                 abuser = ctx.message.mentions[0]
                 abuserid = abuser.id
@@ -1570,12 +1494,20 @@ async def bde(ctx):
     list = ['BrHackage', 'Je s\'appelle Root', 'DrHackon']
     await ctx.send('Votez ' + random.choice(list) + ' !')
 
+@bot.command('toggleinsults')
+async def toggleinsults(ctx):
+    response = "C'est pas toi qui decide !"
+    if ctx.message.author.id == GABRIEL_ID:
+        INSULTES_ACTIVATED = not INSULTES_ACTIVATED
+        response = "Pas de probleme khet"
+    await ctx.send(response)
+
 
 @tasks.loop(seconds=3600)
 async def insulte_tuffigang():
     channel = bot.get_channel(TUFFIGANG_C_ID)
     tuffig = channel.guild.get_role(TUFFIGANG_R_ID)
-    if tuffig != None:
+    if tuffig != None and INSULTES_ACTIVATED:
         members = channel.members
         tuffimembers = []
         for member in members :
@@ -1589,13 +1521,21 @@ async def insulte_tuffigang():
                         "T'es un peu cringe", "Bannez moi ça les admins :",
                         "Get gulaged", "je te ban en fait", "rôle pedance direct",
                         "Marin d'eau douce", "Petit gougnafier", "Sale goujat",
-                        "Pauvre Bélître", "Tu n'est qu'un Butor", "Fieffé Faquin",
+                        "Pauvre Bélître", "Tu n'est qu'un Butor", "Vote Brhackage", "Fieffé Faquin",
                         "Orchidoclaste", "Méchant Fripon", "je vais vous ban, toi et ta bande de malapris,",
                         "Tu n'est qu'un simple Olibrius", "Visiblement, depuis le début du confinement tu vois plus souvent ta mère sur PHub qu'en vrai",
                         "Petit con", "Je te signale au secrétariat"]
 
             msg = random.choice(insultes) + ' <@!' + str(chosen_user.id) + '>'
-
             await channel.send(msg)
+
+@tasks.loop(seconds=3600)
+async def image_tuffigang():
+    channel = bot.get_channel(TUFFIGANG_C_ID)
+    if not INSULTES_ACTIVATED:
+        photo = get_random_photo()
+        await channel.send(photo)
+
+
 
 bot.run(TOKEN)
