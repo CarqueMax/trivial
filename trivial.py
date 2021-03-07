@@ -1506,36 +1506,42 @@ async def toggleinsults(ctx):
 
 @tasks.loop(seconds=3600)
 async def insulte_tuffigang():
-    channel = bot.get_channel(TUFFIGANG_C_ID)
-    tuffig = channel.guild.get_role(TUFFIGANG_R_ID)
-    if tuffig != None and INSULTES_ACTIVATED:
-        members = channel.members
-        tuffimembers = []
-        for member in members :
-            if tuffig in member.roles and member.status!=discord.Status.offline and not member.bot and member.id != 315199843238805504:
-                tuffimembers.append(member)
-        if tuffimembers != []:
-            chosen_user = random.choice(tuffimembers)
+    try:
+        channel = bot.get_channel(TUFFIGANG_C_ID)
+        tuffig = channel.guild.get_role(TUFFIGANG_R_ID)
+        if tuffig != None and INSULTES_ACTIVATED:
+            members = channel.members
+            tuffimembers = []
+            for member in members :
+                if tuffig in member.roles and member.status!=discord.Status.offline and not member.bot and member.id != 315199843238805504:
+                    tuffimembers.append(member)
+            if tuffimembers != []:
+                chosen_user = random.choice(tuffimembers)
 
-            insultes = ["Va te faire cuire un oeuf", "Espèce de fan d'Ecobosto",
-                        "On est obligés de compter en base 3 pour que tu aies un QI à 3 chiffres",
-                        "T'es un peu cringe", "Bannez moi ça les admins :",
-                        "Get gulaged", "je te ban en fait", "rôle pedance direct",
-                        "Marin d'eau douce", "Petit gougnafier", "Sale goujat",
-                        "Pauvre Bélître", "Tu n'est qu'un Butor", "Vote Brhackage", "Fieffé Faquin",
-                        "Orchidoclaste", "Méchant Fripon", "je vais vous ban, toi et ta bande de malapris,",
-                        "Tu n'est qu'un simple Olibrius", "Visiblement, depuis le début du confinement tu vois plus souvent ta mère sur PHub qu'en vrai",
-                        "Petit con", "Je te signale au secrétariat"]
+                insultes = ["Va te faire cuire un oeuf", "Espèce de fan d'Ecobosto",
+                            "On est obligés de compter en base 3 pour que tu aies un QI à 3 chiffres",
+                            "T'es un peu cringe", "Bannez moi ça les admins :",
+                            "Get gulaged", "je te ban en fait", "rôle pedance direct",
+                            "Marin d'eau douce", "Petit gougnafier", "Sale goujat",
+                            "Pauvre Bélître", "Tu n'est qu'un Butor", "Vote Brhackage", "Fieffé Faquin",
+                            "Orchidoclaste", "Méchant Fripon", "je vais vous ban, toi et ta bande de malapris,",
+                            "Tu n'est qu'un simple Olibrius", "Visiblement, depuis le début du confinement tu vois plus souvent ta mère sur PHub qu'en vrai",
+                            "Petit con", "Je te signale au secrétariat"]
 
-            msg = random.choice(insultes) + ' <@!' + str(chosen_user.id) + '>'
-            await channel.send(msg)
+                msg = random.choice(insultes) + ' <@!' + str(chosen_user.id) + '>'
+                await channel.send(msg)
+    except:
+        pass
 
 @tasks.loop(seconds=3600)
 async def image_tuffigang():
-    channel = bot.get_channel(TUFFIGANG_C_ID)
-    if not INSULTES_ACTIVATED:
-        photo = get_random_photo()
-        await channel.send(photo)
+    try:
+        channel = bot.get_channel(TUFFIGANG_C_ID)
+        if not INSULTES_ACTIVATED:
+            photo = get_random_photo()
+            await channel.send(photo)
+    except:
+        pass
 
 # DISQUETTES BOT
 
