@@ -161,6 +161,7 @@ async def on_message(message: discord.Message):
             if len(message.content) >= 10 and 'lefevre' not in message.content:
                 g, p = canGain(message.author.id, message.id, message.content)
                 if g:
+                    lootchance = 0
                     if p == 100:
                         giveExp(message.author.id, random.randint(60, 105))
                         game.pickupRandom(message.author.id)
@@ -1504,7 +1505,6 @@ async def toggleinsults(ctx):
     await ctx.send(response)
 
 
-"""
 @tasks.loop(seconds=3600)
 async def insulte_tuffigang():
     try:
@@ -1543,7 +1543,7 @@ async def image_tuffigang():
             await channel.send(photo)
     except:
         pass
-"""
+
 # DISQUETTES BOT
 
 @bot.command(name='disquette')
