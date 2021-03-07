@@ -1490,10 +1490,10 @@ async def abusereset(ctx, *args):
         await ctx.send("W00dy sait pas coder :(")
 
 
-@bot.command('bde')
-async def bde(ctx):
-    list = ['BrHackage', 'Je s\'appelle Root', 'DrHackon']
-    await ctx.send('Votez ' + random.choice(list) + ' !')
+@bot.command(name='bde')
+async def bde(ctx, *args):
+    await ctx.send("Votez BrHackage !")
+
 
 @bot.command('toggleinsults')
 async def toggleinsults(ctx):
@@ -1504,6 +1504,7 @@ async def toggleinsults(ctx):
     await ctx.send(response)
 
 
+"""
 @tasks.loop(seconds=3600)
 async def insulte_tuffigang():
     try:
@@ -1542,7 +1543,7 @@ async def image_tuffigang():
             await channel.send(photo)
     except:
         pass
-
+"""
 # DISQUETTES BOT
 
 @bot.command(name='disquette')
