@@ -12,7 +12,8 @@ from dotenv import load_dotenv
 
 from ennemies import *
 from embed import createWeaponEmbed, createEmbed, makeSPEmbed
-from utils import *
+from utils import get_random_photo
+from disquettes import add_disquette, pick_random_disquette
 import game
 import pages
 from xp import getPrestigeGain, calcExp, giveExp
@@ -1536,6 +1537,23 @@ async def image_tuffigang():
         photo = get_random_photo()
         await channel.send(photo)
 
+# DISQUETTES BOT
 
+@bot.command(name='disquette')
+async def disquette(ctx, *args):
+    if ctx.guild.id in [816626993193418775, 280703292730900480]: #Tuffigang / testserver
+        if len(args) != 0:
+            author = ctx.author.nick
+            disquette = ' '.join(args)
+            add_disquette(author, disquette)
+            await ctx.send("Pas mal celle la !")
+        else:
+            await ctx.send("Syntaxe:\nlefevre disquette <Disquette>")
+
+@bot.command(name='disquettemoi')
+async def disquette_moi(ctx, *args):
+    disquette = pick_random_disquette()
+    await ctx.send(disquette)
+    
 
 bot.run(TOKEN)
