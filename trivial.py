@@ -43,6 +43,7 @@ GILDAS_ID  = 158571429183356937
 EVAN_ID    = 282264924472737792
 ANTOINE_ID = 319444688694280192
 GABRIEL_ID = 135321090699427840 #C'est moi le plus vieux sur discord hehe
+SAFE_ID = 398863083176722432
 
 INSULTES_ACTIVATED = True
 
@@ -184,8 +185,6 @@ async def on_message(message: discord.Message):
                     if random.randint(1, 100) < 31 and game.amountOfPveBattles(message.author.id) < 5:
                         game.incPveBattles(message.author.id)
 
-                    if message.content == "fuck ecobosto":
-                        await message.channel.send("Ecobosto est la meilleure entreprise du monde. Rejoignez-nous, ayez un avenir.")
         await bot.process_commands(message)
 
 
